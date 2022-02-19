@@ -1,11 +1,6 @@
 name: "Build and deploy web application"
 on:
   push:
-    paths:
-      - "src/**"
-      - "helpers/**"
-      - "typings/**"
-      - "web/**"
     branches:
       - main
 
