@@ -1,0 +1,31 @@
+name: "Build and deploy web application"
+on:
+  push:
+    paths:
+      - "src/**"
+      - "helpers/**"
+      - "typings/**"
+      - "web/**"
+    branches:
+      - main
+
+jobs:
+  deploy-web-to-production:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "14.x"
+      - name: Install dependencies
+        run: yarn install
+      - name: Build application
+        run: yarn build
+      - name: Configure AWS credentials from Production account
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.CVCHECKLIST_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.CVCHECKLIST_AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+      - name: Deploy application
+        run: yarn deploy
