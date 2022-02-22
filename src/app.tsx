@@ -1,6 +1,7 @@
 import "antd/dist/antd.less";
 import { default as styled, ThemeProvider } from "styled-components";
 import defaultTheme from "./themes/default.json";
+import Editor from "./components/editor";
 
 const Header = styled.div`
     background-color: ${(props) => props.theme.primaryColor};
@@ -15,7 +16,7 @@ function App(): JSX.Element {
         <ThemeProvider theme={defaultTheme}>
             <div className="App">
                 <Header>checklist</Header>
-                Hello
+                <Editor />
             </div>
         </ThemeProvider>
     );
