@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState } from "react";
 import styled from "styled-components";
 import { Row, Col } from "antd";
 import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 import produce from "immer";
-import { get, set } from "lodash";
+import { get, set, cloneDeep } from "lodash";
 
 type Criterion = {
     type: "criterion";
@@ -39,16 +40,16 @@ const sections: Array<Section | Criterion> = [
                         title: "Criterion A",
                         type: "criterion",
                     },
-                    {
-                        id: "c-2",
-                        title: "Criterion B",
-                        type: "criterion",
-                    },
-                    {
-                        id: "c-3",
-                        title: "Criterion C",
-                        type: "criterion",
-                    },
+                    // {
+                    //     id: "c-2",
+                    //     title: "Criterion B",
+                    //     type: "criterion",
+                    // },
+                    // {
+                    //     id: "c-3",
+                    //     title: "Criterion C",
+                    //     type: "criterion",
+                    // },
                 ],
                 title: "Section A",
                 type: "section",
@@ -61,16 +62,16 @@ const sections: Array<Section | Criterion> = [
                         title: "Criterion D",
                         type: "criterion",
                     },
-                    {
-                        id: "c-5",
-                        title: "Criterion E",
-                        type: "criterion",
-                    },
-                    {
-                        id: "c-6",
-                        title: "Criterion F",
-                        type: "criterion",
-                    },
+                    // {
+                    //     id: "c-5",
+                    //     title: "Criterion E",
+                    //     type: "criterion",
+                    // },
+                    // {
+                    //     id: "c-6",
+                    //     title: "Criterion F",
+                    //     type: "criterion",
+                    // },
                 ],
                 title: "Section B",
                 type: "section",
@@ -88,16 +89,16 @@ const sections: Array<Section | Criterion> = [
                         title: "Criterion G",
                         type: "criterion",
                     },
-                    {
-                        id: "c-8",
-                        title: "Criterion H",
-                        type: "criterion",
-                    },
-                    {
-                        id: "c-9",
-                        title: "Criterion I",
-                        type: "criterion",
-                    },
+                    // {
+                    //     id: "c-8",
+                    //     title: "Criterion H",
+                    //     type: "criterion",
+                    // },
+                    // {
+                    //     id: "c-9",
+                    //     title: "Criterion I",
+                    //     type: "criterion",
+                    // },
                 ],
                 title: "Section C",
                 type: "section",
@@ -120,13 +121,13 @@ const getPathToSections = (
     sections: Array<Section | Criterion>,
     sectionId: string,
     list: Array<number> = [],
-): Array<number> | undefined => {
+): Array<number | string> | undefined => {
     for (const [i, section] of sections.entries()) {
         if (section.type === "section") {
             if (section.id === sectionId) {
-                return [...list, i];
+                return list.length === 0 ? [i] : [...list, i];
             } else {
-                const subtree = getPathToSections(section.sections, sectionId, [...list, i]);
+                const subtree = getPathToSections(section.sections, sectionId, [i]);
                 if (subtree) {
                     return [...list, ...subtree];
                 }
@@ -137,10 +138,11 @@ const getPathToSections = (
 
 interface SectionProps {
     section: Section;
+    isDragging?: boolean;
 }
 
-const Section: React.FC<SectionProps> = ({ section }) => (
-    <div style={{ border: "2px #000 solid", padding: 20 }}>
+const Section: React.FC<SectionProps> = ({ section, isDragging = false }) => (
+    <div style={{ background: "#aaa", border: "2px #000 solid", margin: 20, padding: 20 }}>
         <h4>{section.title}</h4>
         <Droppable droppableId={section.id}>
             {(provided) => (
@@ -148,28 +150,32 @@ const Section: React.FC<SectionProps> = ({ section }) => (
                     {...provided.droppableProps}
                     ref={provided.innerRef}
                     style={{
+                        background: "#ccc",
                         border: "2px #000 solid",
-                        margin: 20,
-                        padding: 20,
-                        width: 500,
+                        minHeight: 50,
+                        // margin: 20,
+                        // padding: 20,
                     }}
                 >
                     {section.sections.map((section, index) => (
                         <Draggable key={section.id} draggableId={section.id} index={index}>
-                            {(provided) => (
+                            {(provided, snapshot) => (
                                 <Col
                                     ref={provided.innerRef}
                                     {...provided.draggableProps}
                                     {...provided.dragHandleProps}
                                     style={{
                                         ...provided.draggableProps.style,
-                                        paddingBottom: 10,
-                                        paddingTop: 10,
+                                        // paddingBottom: 10,
+                                        // paddingTop: 10,
                                     }}
                                     span={24}
                                 >
                                     {section.type === "section" ? (
-                                        <Section section={section} />
+                                        <Section
+                                            section={section}
+                                            isDragging={snapshot.isDragging}
+                                        />
                                     ) : (
                                         <Criterion>{section.title}</Criterion>
                                     )}
@@ -191,11 +197,12 @@ const Editor: React.FC = () => {
             if (result.destination.droppableId === result.source.droppableId) {
                 const sourcePath = getPathToSections(items, result.source.droppableId);
                 if (sourcePath) {
+                    const _sourcePath = sourcePath.join(" sections ").split(" ");
                     setItems(
                         produce(items, (draftItems) => {
-                            const sourceItems = get(items, sourcePath);
+                            const sourceItems = get(items, _sourcePath);
                             if (result.destination) {
-                                set(draftItems, sourcePath, {
+                                set(draftItems, _sourcePath, {
                                     ...sourceItems,
                                     sections: reorder(
                                         sourceItems.sections,
@@ -210,14 +217,34 @@ const Editor: React.FC = () => {
             } else {
                 const destinationPath = getPathToSections(items, result.destination.droppableId);
                 const sourcePath = getPathToSections(items, result.source.droppableId);
+                console.log(result);
+                console.log(sourcePath);
+                console.log(destinationPath);
                 if (destinationPath && sourcePath) {
+                    const _sourcePath = sourcePath.join(" sections ").split(" ");
+                    const _destinationPath = destinationPath.join(" sections ").split(" ");
+                    console.log(_sourcePath);
+                    console.log(_destinationPath);
                     setItems(
                         produce(items, (draftItems) => {
-                            const sourceItems = get(items, sourcePath) as Section;
-                            const destinationItems = get(items, destinationPath) as Section;
+                            const sourceItems = get(draftItems, _sourcePath) as Section;
                             if (result.destination) {
-                                const newItem = sourceItems.sections[result.source.index];
-                                set(draftItems, destinationPath, {
+                                const newItem = cloneDeep(
+                                    sourceItems.sections[result.source.index],
+                                );
+                                console.log(sourceItems);
+                                set(draftItems, _sourcePath, {
+                                    ...sourceItems,
+                                    sections: sourceItems.sections.filter(
+                                        (section, index) => index !== result.source.index,
+                                    ),
+                                });
+                                const destinationItems = get(
+                                    draftItems,
+                                    _destinationPath,
+                                ) as Section;
+                                console.log(destinationItems);
+                                set(draftItems, _destinationPath, {
                                     ...destinationItems,
                                     sections: [
                                         ...destinationItems.sections.slice(
@@ -230,12 +257,6 @@ const Editor: React.FC = () => {
                                         ),
                                     ],
                                 });
-                                set(draftItems, sourcePath, {
-                                    ...sourceItems,
-                                    sections: sourceItems.sections.filter(
-                                        (section, index) => index !== result.source.index,
-                                    ),
-                                });
                             }
                         }),
                     );
@@ -244,7 +265,7 @@ const Editor: React.FC = () => {
         }
     };
 
-    const root = sections[0];
+    const root = items[0];
 
     if (!root || root.type !== "section") {
         return null;
